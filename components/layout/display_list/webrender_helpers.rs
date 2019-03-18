@@ -10,8 +10,10 @@
 use crate::display_list::items::{ClipScrollNode, ClipScrollNodeType};
 use crate::display_list::items::{DisplayItem, DisplayList, StackingContextType};
 use msg::constellation_msg::PipelineId;
-use webrender_api::{self, ClipId, DisplayListBuilder, RasterSpace, SpaceAndClipInfo, SpatialId};
-use webrender_api::{LayoutPoint, SpecificDisplayItem};
+use webrender_api::{
+    self, ClipId, DisplayListBuilder, RasterSpace, SpaceAndClipInfo, SpatialId,
+};
+use webrender_api::{LayoutPoint, PropertyBinding, SpecificDisplayItem};
 
 pub trait WebRenderDisplayListConverter {
     fn convert_to_webrender(&self, pipeline_id: PipelineId) -> DisplayListBuilder;
@@ -204,17 +206,20 @@ impl WebRenderDisplayItemConverter for DisplayItem {
                 let mut info = webrender_api::LayoutPrimitiveInfo::new(stacking_context.bounds);
                 let spatial_id =
                     if let Some(frame_index) = stacking_context.established_reference_frame {
-                        debug_assert!(
-                            stacking_context.transform.is_some() ||
-                                stacking_context.perspective.is_some()
-                        );
+                        let transform =
+                            match (stacking_context.transform, stacking_context.perspective) {
+                                (None, Some(p)) => p,
+                                (Some(t), None) => t,
+                                (Some(t), Some(p)) => t.pre_mul(&p),
+                                (None, None) => unreachable!(),
+                            };
 
                         let spatial_id = builder.push_reference_frame(
                             &stacking_context.bounds,
                             state.active_spatial_id,
                             stacking_context.transform_style,
                             stacking_context.transform.map(Into::into),
-                            stacking_context.perspective,
+                            ReferenceFrameKind::Transform,
                         );
                         state.spatial_ids[frame_index.to_index()] = Some(spatial_id);
                         state.clip_ids[frame_index.to_index()] = Some(cur_clip_id);
