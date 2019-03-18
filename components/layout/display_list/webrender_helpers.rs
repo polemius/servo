@@ -11,7 +11,7 @@ use crate::display_list::items::{ClipScrollNode, ClipScrollNodeType};
 use crate::display_list::items::{DisplayItem, DisplayList, StackingContextType};
 use msg::constellation_msg::PipelineId;
 use webrender_api::{
-    self, ClipId, DisplayListBuilder, RasterSpace, SpaceAndClipInfo, SpatialId,
+    self, ClipId, DisplayListBuilder, RasterSpace, ReferenceFrameKind, SpaceAndClipInfo, SpatialId,
 };
 use webrender_api::{LayoutPoint, PropertyBinding, SpecificDisplayItem};
 
@@ -218,7 +218,7 @@ impl WebRenderDisplayItemConverter for DisplayItem {
                             &stacking_context.bounds,
                             state.active_spatial_id,
                             stacking_context.transform_style,
-                            stacking_context.transform.map(Into::into),
+                            PropertyBinding::Value(transform),
                             ReferenceFrameKind::Transform,
                         );
                         state.spatial_ids[frame_index.to_index()] = Some(spatial_id);
